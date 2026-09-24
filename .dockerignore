@@ -1,0 +1,13 @@
+.git
+.env
+.env.*
+.delegate-data
+venv
+.venv
+__pycache__
+**/__pycache__
+node_modules
+tests
+*.sqlite3*
+*.mp3
+*.wav

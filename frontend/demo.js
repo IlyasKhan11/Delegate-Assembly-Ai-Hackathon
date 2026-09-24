@@ -1,0 +1,42 @@
+export const SAMPLE_PROMPT = "Ask the hotel if early check-in at 12 PM is available. I can pay up to $20 extra, but don't confirm anything without asking me.";
+export const LANGUAGES = [
+  ['Portuguese (Brazil)', 'Português (Brasil)', 'PT-BR'],
+  ['Spanish', 'Español', 'ES'], ['French', 'Français', 'FR'],
+  ['German', 'Deutsch', 'DE'], ['English', 'English', 'EN'],
+];
+const phrases = {
+  greeting: ["Good afternoon, Grandview Harbour, how can I help you?", "Buenas tardes, Grandview Harbour, ¿en qué puedo ayudarle?", "Bonjour, Grandview Harbour, comment puis-je vous aider ?", "Guten Tag, Grandview Harbour, wie kann ich Ihnen helfen?", "Boa tarde, Grandview Harbour, como posso ajudar?"],
+  opening: ["Hi, I’m calling on behalf of a guest arriving Friday. Is early check-in at 12 PM available?", "Hola, llamo de parte de un huésped que llega el viernes. ¿Hay check-in anticipado a las 12 PM?", "Bonjour, je vous appelle pour un client qui arrive vendredi. Une arrivée à midi est-elle possible ?", "Hallo, ich rufe für einen Gast an, der am Freitag anreist. Ist ein früher Check-in um 12 Uhr möglich?", "Olá, estou ligando por um hóspede que chega na sexta-feira. É possível fazer check-in antecipado às 12h?"],
+  quote: ["We can do 12 PM, but there is an early check-in fee of thirty dollars.", "Podemos hacerlo a las 12 PM, pero hay un cargo de treinta dólares por entrada anticipada.", "Une arrivée à midi est possible, mais les frais sont de trente dollars.", "12 Uhr ist möglich, aber der frühe Check-in kostet dreißig Dollar.", "Podemos fazer às 12h, mas há uma taxa de trinta dólares pelo check-in antecipado."],
+  stall: ["Understood. Let me check that amount before I agree to anything.", "Entendido. Déjeme verificar ese importe antes de aceptar nada.", "Compris. Laissez-moi vérifier ce montant avant de donner mon accord.", "Verstanden. Ich prüfe den Betrag, bevor ich etwas zusage.", "Entendido. Deixe-me verificar esse valor antes de concordar."],
+  blocked: ["Call held — $30 exceeds the $20 ceiling. Awaiting user decision.", "Llamada en espera — $30 supera el límite de $20. Esperando su decisión.", "Appel en attente — 30 $ dépasse le plafond de 20 $. En attente de votre décision.", "Anruf angehalten — 30 $ übersteigt das Limit von 20 $. Ihre Entscheidung ist erforderlich.", "Chamada em espera — US$ 30 excede o limite de US$ 20. Aguardando sua decisão."],
+  negotiate: ["My guest can go up to twenty dollars for the early check-in. Would that work on your side?", "Mi huésped puede llegar hasta veinte dólares por la entrada anticipada. ¿Le funcionaría?", "Mon client peut payer jusqu’à vingt dollars pour une arrivée anticipée. Cela vous conviendrait-il ?", "Mein Gast kann bis zu zwanzig Dollar für den frühen Check-in zahlen. Wäre das möglich?", "Meu hóspede pode pagar até vinte dólares pelo check-in antecipado. Seria possível?"],
+  accept: ["My guest approves the thirty-dollar fee this time. Please tell me the next step before confirming anything.", "Mi huésped aprueba el cargo de treinta dólares esta vez. Indíqueme el siguiente paso antes de confirmar nada.", "Mon client accepte les trente dollars cette fois. Indiquez-moi la prochaine étape avant toute confirmation.", "Mein Gast genehmigt diesmal dreißig Dollar. Bitte nennen Sie den nächsten Schritt vor einer Bestätigung.", "Meu hóspede aprova a taxa de trinta dólares desta vez. Informe o próximo passo antes de confirmar."],
+  decline: ["Thank you, but my guest would like to decline the offer. We will keep the original check-in time.", "Gracias, pero mi huésped desea rechazar la oferta. Mantendremos la hora de entrada original.", "Merci, mais mon client décline cette offre. Nous gardons l’heure d’arrivée initiale.", "Danke, aber mein Gast lehnt das Angebot ab. Wir behalten die ursprüngliche Check-in-Zeit.", "Obrigado, mas meu hóspede deseja recusar a oferta. Manteremos o horário original."],
+  accepted20: ["Yes, we can offer $20. You can pay at the front desk. Shall I hold the 12 PM check-in for Friday?", "Sí, podemos ofrecerlo por $20. Puede pagar en recepción. ¿Reservo la entrada a las 12 PM del viernes?", "Oui, nous acceptons 20 $. Le paiement se fait à la réception. Dois-je réserver l’arrivée à midi vendredi ?", "Ja, 20 $ sind möglich. Sie zahlen an der Rezeption. Soll ich den Check-in am Freitag um 12 Uhr reservieren?", "Sim, podemos oferecer por US$ 20. O pagamento é na recepção. Reservo o check-in de sexta às 12h?"],
+  accepted30: ["Of course. You can pay $30 at the front desk. Shall I hold the 12 PM check-in for Friday?", "Por supuesto. Puede pagar $30 en recepción. ¿Reservo la entrada a las 12 PM del viernes?", "Bien sûr. Vous réglerez 30 $ à la réception. Dois-je réserver vendredi à midi ?", "Natürlich. Sie zahlen 30 $ an der Rezeption. Soll ich Freitag um 12 Uhr reservieren?", "Claro. Pode pagar US$ 30 na recepção. Reservo sexta às 12h?"],
+  confirm: ["Yes, please hold the early check-in for Friday at 12 PM at the agreed price, payable at the front desk.", "Sí, reserve la entrada anticipada del viernes a las 12 PM al precio acordado, pagadero en recepción.", "Oui, veuillez réserver l’arrivée vendredi à midi au prix convenu, payable à la réception.", "Ja, bitte reservieren Sie Freitag um 12 Uhr zum vereinbarten Preis, zahlbar an der Rezeption.", "Sim, reserve sexta às 12h pelo preço acordado, com pagamento na recepção."],
+  confirmed: ["All set for Friday at 12 PM. This is Marcus at the front desk. I’m not sure about the room category or luggage storage before noon.", "Todo listo para el viernes a las 12 PM. Soy Marcus de recepción. No estoy seguro de la categoría de habitación ni del almacenamiento de equipaje antes del mediodía.", "Tout est prêt pour vendredi à midi. Ici Marcus à la réception. La catégorie de chambre et la consigne avant midi restent à vérifier.", "Alles ist für Freitag um 12 Uhr bereit. Hier ist Marcus von der Rezeption. Zimmerkategorie und Gepäckaufbewahrung vor Mittag sind noch unklar.", "Tudo certo para sexta às 12h. Sou Marcus, da recepção. A categoria do quarto e o depósito de bagagem antes do meio-dia precisam ser verificados."],
+  goodbye: ["Understood. We’ll keep the original check-in. Thank you for calling. Goodbye!", "Entendido. Mantendremos la entrada original. Gracias por llamar. ¡Adiós!", "Compris. Nous gardons l’arrivée initiale. Merci de votre appel. Au revoir !", "Verstanden. Wir behalten die ursprüngliche Zeit. Danke für Ihren Anruf. Auf Wiedersehen!", "Entendido. Manteremos o horário original. Obrigado pela ligação. Até logo!"],
+};
+export function phrase(key, language = 'Spanish') {
+  const index = {English: 0, Spanish: 1, French: 2, German: 3, 'Portuguese (Brazil)': 4, Portuguese: 4}[language] ?? 0;
+  return {text: phrases[key]?.[0] || key, translation: phrases[key]?.[index] || ''};
+}
+export function initialTranscript(language) {
+  return [['caller','greeting','01:42'], ['agent','opening','01:47'], ['caller','quote','01:58'], ['agent','stall','02:06'], ['system','blocked','02:12']].map(([speaker,key,time]) => ({speaker,time,...phrase(key,language)}));
+}
+export function demoSummary(outcome, price = 20) {
+  if (outcome === 'confirmed') return {
+    outcome_headline: `Early check-in at 12:00 held for $${price}.`,
+    outcome_subtext: 'The receptionist accepted your request. Payment happens at the desk, so nothing was charged during the call.',
+    confirmed_items: ['Early check-in at 12:00 PM on Friday, held with your explicit approval.', `Fee of $${price}, ${price === 20 ? 'agreed after the agent countered the hotel’s $30.' : 'approved by you as a one-time exception.'}`, 'Payment at the front desk on arrival — no card given over the phone.', 'Receptionist name recorded: Marcus, front desk.'],
+    unresolved_items: ['Whether the room will be the same category as the original booking.', 'Luggage storage before 12:00 — receptionist was not sure.'],
+  };
+  return {
+    outcome_headline: outcome === 'declined' ? 'Offer declined. Your original check-in stays.' : 'Call ended. Nothing has been confirmed.',
+    outcome_subtext: 'No booking was made and no payment was authorized during this demo call.',
+    confirmed_items: ['The hotel offered early check-in at 12:00 PM for $30.', 'No personal or payment details were shared.'],
+    unresolved_items: outcome === 'declined' ? ['Early check-in was declined. Contact the hotel if your plans change.'] : ['Early check-in has not been booked.', 'The final price and conditions still need your approval.'],
+  };
+}

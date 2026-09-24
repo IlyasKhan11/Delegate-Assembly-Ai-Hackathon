@@ -1,24 +1,15 @@
-import os
-from openai import OpenAI
-from dotenv import load_dotenv
+"""List models from the selected provider without making a completion request."""
+from engine import client
+from ai_config import get_provider, provider_key
 
-load_dotenv()
-
-groq_key = os.getenv("GROQ_API_KEY")
-if not groq_key:
-    print("Error: GROQ_API_KEY not found in .env")
-    exit(1)
-
-client = OpenAI(
-    base_url="https://api.groq.com/openai/v1",
-    api_key=groq_key.strip(),
-)
+if not provider_key():
+    raise SystemExit('Add the selected provider API key to .env first.')
 
 try:
     models = client.models.list()
-    print("\n--- Available models for your Groq API key ---")
-    for m in sorted(models.data, key=lambda x: x.id):
-        print(f"  • {m.id}")
-    print("----------------------------------------------\n")
-except Exception as e:
-    print(f"Error fetching models from Groq: {e}")
+    print(f'Available {get_provider()} models:')
+    for model in sorted(models.data, key=lambda item: item.id):
+        print(f'  {model.id}')
+except Exception as error:
+    # Do not print SDK error bodies, which could contain credential information.
+    raise SystemExit(f'Model listing failed ({type(error).__name__}). Check your key and provider connection.')

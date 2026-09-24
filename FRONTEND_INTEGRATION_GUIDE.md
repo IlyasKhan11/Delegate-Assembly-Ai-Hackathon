@@ -1,5 +1,11 @@
 # CallBridge Frontend Integration Guide
 
+## Implemented frontend
+
+The reference frontend is now implemented in `frontend/` and served directly by FastAPI. Open `http://localhost:8000` after starting the server. See [frontend/README.md](frontend/README.md) for the current implementation and [API_CONTRACT.md](API_CONTRACT.md) for updated approval semantics. In Assist mode **every reply** waits for approval; generated drafts are **not** approvals. AI roleplay uses REST and uploaded microphone recordings; the guided hotel demo runs locally without credentials. Actual outbound telephony is not implemented.
+
+---
+
 Welcome frontend team! This document details how CallBridge works, how the backend pipeline operates, and how to build the UI dashboard.
 
 ---

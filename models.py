@@ -1,12 +1,36 @@
-from typing import List, Optional
+from typing import List, Optional, Literal
 from pydantic import BaseModel, Field, field_validator
+from localization import MESSAGES
+
+class ConversationPreferences(BaseModel):
+    tone: Literal["professional", "friendly", "direct"] = "professional"
+    reply_length: Literal["concise", "detailed"] = "concise"
+    additional_instructions: str = Field(default="", max_length=1200)
+
 
 class IncomingUserRequest(BaseModel):
-    raw_prompt: str
-    user_language: Optional[str] = "English"
-    mode: Optional[str] = Field(
+    raw_prompt: str = Field(max_length=4000)
+    business_name: Optional[str] = Field(default=None, max_length=160)
+    spending_limit: Optional[float] = Field(default=None, ge=0, le=1000000, allow_inf_nan=False)
+    user_language: str = "English"
+    voice: Literal["female", "male"] = "female"
+    preferences: ConversationPreferences = Field(default_factory=ConversationPreferences)
+
+    @field_validator("user_language", mode="before")
+    @classmethod
+    def supported_language(cls, value):
+        # Preserve compatibility with earlier clients that sent "Portuguese".
+        if value in ("Portuguese", "Brazilian Portuguese", "pt-BR"):
+            value = "Portuguese (Brazil)"
+        if value is None:
+            value = "English"
+        if not isinstance(value, str) or value not in MESSAGES:
+            raise ValueError("Choose Brazilian Portuguese, Spanish, French, German, or English.")
+        return value
+
+    mode: Literal["delegate", "assist"] = Field(
         default="delegate",
-        description="'delegate' (AI negotiates autonomously within constraints) or 'assist' (pauses for user approval on each commitment)"
+        description="'delegate' (routine replies are automatic, commitments require approval) or 'assist' (every reply requires approval)"
     )
 
 class RuleConstraint(BaseModel):
@@ -50,6 +74,8 @@ class ExtractedRules(BaseModel):
 
 
 class TurnDecision(BaseModel):
+    translated_caller_text: Optional[str] = None
+    translated_response: Optional[str] = None
     is_dealbreaker: bool = Field(
         description="True if the caller quotes a price above spend ceiling, violates time rules, or asks for unauthorized commitment/data."
     )
@@ -61,6 +87,8 @@ class TurnDecision(BaseModel):
         default=None,
         description="Human-readable reason for the red card (e.g. 'Price exceeds maximum allowed of $30.')."
     )
+    translated_violation_reason: Optional[str] = None
+    translated_user_options: List[str] = Field(default_factory=list)
     immediate_stalling_phrase: Optional[str] = Field(
         default=None,
         description="Short, polite phrase the AI immediately speaks to caller while paused (e.g. 'Hold on a moment while I confirm that.')."
@@ -78,7 +106,7 @@ class TurnDecision(BaseModel):
         description="True if the goal has been confirmed/finalized or the receptionist said goodbye and the call should conclude."
     )
 
-    @field_validator("suggested_user_options", mode="before")
+    @field_validator("suggested_user_options", "translated_user_options", mode="before")
     @classmethod
     def ensure_list(cls, v):
         if v is None:
@@ -86,11 +114,15 @@ class TurnDecision(BaseModel):
         return v
 
 class UserDecisionAction(BaseModel):
+    request_id: Optional[str] = Field(default=None, max_length=80)
+    response_mode: Literal["instruction", "verbatim"] = "instruction"
     chosen_action: str = Field(
+        max_length=500,
         description="The action selected by the user, e.g., 'Negotiate down to $30', 'Accept', 'Decline'"
     )
     custom_instruction: Optional[str] = Field(
         default=None,
+        max_length=4000,
         description="Optional text if the user chose 'Type my own response'"
     )
 
@@ -122,4 +154,21 @@ class FinalSummary(BaseModel):
     )
 
 class IncomingCallerTurn(BaseModel):
-    caller_text: str
+    caller_text: str = Field(max_length=4000)
+    request_id: Optional[str] = Field(default=None, max_length=80)
+
+
+class DraftApproval(BaseModel):
+    draft_id: Optional[str] = Field(default=None, max_length=80)
+
+
+class VoiceChoice(BaseModel):
+    """Which agent voice this call should use."""
+    voice: Literal["female", "male"] = "female"
+
+
+class SpeechRequest(BaseModel):
+    """Text to read aloud. For a real call it must already be part of the conversation."""
+    text: str = Field(max_length=4000)
+    # Only the guided demo sets this; a real call takes its voice from the session.
+    voice: Optional[Literal["female", "male"]] = None

@@ -1,0 +1,19 @@
+services:
+  delegate:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DELEGATE_PUBLIC_MODE: "true"
+      DELEGATE_PILOT_PASSCODE: ${DELEGATE_PILOT_PASSCODE:?Set a random pilot passcode of at least 16 characters in .env}
+      DELEGATE_DATABASE: /data/calls.sqlite3
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - conversations:/data
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+volumes:
+  conversations:

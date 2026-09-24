@@ -1,0 +1,11 @@
+{
+  "name": "delegate-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Dependency-free Delegate frontend, served by the existing FastAPI app",
+  "scripts": {
+    "check": "node --check frontend/app.js && node --check frontend/api.js && node --check frontend/demo.js && node --check frontend/participant.js && node --check frontend/speech.js && node --check frontend/voice_call.js && node --check frontend/voice_playback.js && node --check frontend/live_listen.js && node --check frontend/i18n.js && node --check frontend/theme.js && node --check frontend/login.js",
+    "test": "node --experimental-vm-modules --test tests/frontend.test.js"
+  }
+}

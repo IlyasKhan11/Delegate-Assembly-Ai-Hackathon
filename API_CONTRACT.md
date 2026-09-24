@@ -1,9 +1,26 @@
 # CallBridge Backend API & WebSocket Specification
 
+## Delegate frontend integration update
+
+The app now serves the frontend at `/` and `/demo`. All existing REST routes remain available. The following behavior supersedes older examples below:
+
+- `GET /api/health` returns `status`, `ai_configured`, and `telephony_configured` booleans.
+- In Assist mode, routine turns return `AWAITING_APPROVAL`, with the reply in `decision.draft_response`. They are not appended as spoken until `/approve` succeeds.
+- `decision.translated_caller_text` and `decision.translated_response` provide bilingual display text.
+- `/user-action` stages a draft; the approved decision ledger is updated only by `/approve`.
+- `/approve` returns `status: APPROVED`, `speak_text`, and `session_status` (`IN_PROGRESS` or `COMPLETED`).
+- `POST /api/session/{id}/reject` clears the pending draft. `POST /api/session/{id}/interrupt` clears it and pauses the call for a decision.
+- Pending decisions block new caller turns with HTTP 409. Completed sessions block further actions. Retry a failed `/complete` request; successful summaries are cached.
+- Status responses additionally include `transcript_history`, `rules`, `pending_translation`, and `summary` when present.
+- WebSocket `STAGING_UPDATE` is emitted for Assist replies. `STATUS_UPDATE` reports transitions. `REJECT_DRAFT` and `INTERRUPT` events use the same controls as REST.
+- Session IDs are opaque. Credentials are optional for serving the frontend but required for AI sessions. No telephone provider is connected.
+
+---
+
 **Base URL**: `http://127.0.0.1:8000`  
 **WebSocket URL**: `ws://127.0.0.1:8000/ws/call/{session_id}`  
 **Interactive Docs**: `http://127.0.0.1:8000/docs`  
-**CORS**: Enabled for all origins (`allow_origins=["*"]`).
+**CORS**: Same-origin frontend; localhost:8000 and 127.0.0.1:8000 are allowed by default. Set `CORS_ORIGINS` to a comma-separated list for other origins.
 
 ---
 
@@ -149,6 +166,120 @@ Generates post-call summary and report card.
 
 ---
 
+## 2a. Spoken replies in a natural voice (free)
+
+The agent's replies are read aloud using `edge-tts` (Microsoft neural voices). No API key
+and no credits are involved. `GET /api/health` reports `tts_configured` and `tts_voice`;
+the voice is chosen with `TTS_VOICE` in `.env`.
+
+Both routes below return `audio/mpeg` and **only accept text already in the conversation**,
+so they cannot be used to make the agent say something new. Audio is cached server-side,
+so asking for the same line twice is instant.
+
+### `POST /api/session/{session_id}/speech`
+For the controller. Accepts any line in the transcript **and the draft currently under
+review**, so its audio can be prepared while the human reads it and play instantly on
+approval.
+
+**Request**: `{"text": "Would twenty dollars work?"}`
+**Response (200 OK)**: MP3 bytes, `Content-Type: audio/mpeg`.
+**403** if the text is not part of this conversation. **502** if synthesis fails — the page
+then falls back to the browser's own voice rather than going silent.
+
+### `POST /api/demo/speech`
+Voice for the guided demo, which runs with no call and no API key. The demo lets the
+presenter type any reply, so unlike the call routes this cannot check words against a
+transcript; it is capped at 600 characters and rate limited to 40 requests per minute
+per client instead. Takes the voice in the body since there is no session:
+`{"text": "...", "voice": "female"}`. **413** if too long, **429** if too frequent,
+**502** if synthesis fails (the page then falls back to the browser voice).
+
+### `POST /api/session/{session_id}/voice-choice`
+Chooses the agent's voice for this call. Stored on the session, so the receptionist
+hears the same voice and a live AssemblyAI call uses the matching one.
+
+**Request**: `{"voice": "male"}` — `"female"` (default, `en-US-AvaNeural`) or `"male"`
+(`en-US-AndrewNeural`). Anything else returns **422**.
+**Response (200 OK)**: `{"status": "ok", "tts_voice": "en-US-AndrewNeural", "tts_voice_choice": "male", "tts_voice_choices": ["female", "male"]}`
+
+`POST /api/session/create` also accepts `"voice"` in its body, and `GET /api/session/{id}/status`
+reports `tts_voice`, `tts_voice_choice`, and `tts_voice_choices`.
+
+### `POST /api/participant/{token}/speech`
+For the receptionist. Stricter: accepts **only agent lines that were actually spoken**.
+A draft still under review returns **403**, and so do the receptionist's own words.
+
+---
+
+## 2b. Live voice calls (AssemblyAI Voice Agent API)
+
+Optional. Replaces the browser's built-in speech with a real spoken call. AssemblyAI
+handles listening, turn detection, interruptions, and speaking; CallBridge remains the
+agent's language model, so the approval gate and every guardrail are unchanged.
+
+Requires `ASSEMBLYAI_API_KEY` and a public `https` `PUBLIC_BASE_URL`. `GET /api/health`
+and `GET /api/session/{id}/status` both report `voice_call_configured`, `voice_call_hint`,
+and `voice`; the status route also reports `voice_live`.
+
+### `POST /api/session/{session_id}/voice/start`
+Registers this call's agent with AssemblyAI and opens the voice line. The agent's opening
+line is appended to the transcript, because AssemblyAI speaks the greeting directly.
+
+**Response (200 OK)**:
+```json
+{
+  "voice_live": true,
+  "status": "IN_PROGRESS",
+  "greeting": "Hello, I am calling about early check-in for my client.",
+  "voice": "michael",
+  "sample_rate": 24000,
+  "participant_path": "/receptionist/<token>"
+}
+```
+**503** when `ASSEMBLYAI_API_KEY` or a public `https` `PUBLIC_BASE_URL` is missing; the
+`detail` says which. **502** when AssemblyAI rejects the agent definition.
+
+### `POST /api/session/{session_id}/voice/stop`
+Closes the voice line and deletes the AssemblyAI agent. Returns `{"voice_live": false}`.
+
+### `GET /api/participant/{token}/voice`
+Called by the receptionist page. Returns a **one-time** token, valid for two minutes, for
+opening the AssemblyAI WebSocket. The AssemblyAI API key never leaves the server.
+
+**Response (200 OK)**:
+```json
+{
+  "voice_live": true,
+  "agent_id": "7ad24396-b822-4dca-871a-be9cc4781cf9",
+  "websocket_url": "wss://agents.assemblyai.com/v1/ws",
+  "token": "<one-time token>",
+  "voice": "michael",
+  "sample_rate": 24000
+}
+```
+When no call is running it returns `{"voice_live": false, "hint": "..."}` with **200**, so
+the page can explain rather than error.
+
+### `POST /v1/voice/{session_id}/chat/completions`
+**Called by AssemblyAI, not by the frontend.** CallBridge presented as an OpenAI-compatible
+model. Requires `Authorization: Bearer <VOICE_BRIDGE_TOKEN>`; anything else gets **401**.
+
+Streams Server-Sent Events in the OpenAI `chat.completion.chunk` shape. The reply depends
+on what the turn needs:
+
+| Turn | What is streamed |
+|---|---|
+| Routine and within limits | The agent's reply, immediately |
+| Needs approval | The stalling phrase immediately, then the connection is **held open**; the approved words stream on that same connection the moment Approve is pressed |
+| Still waiting after 30s and 70s | A short holding phrase, so the line never goes silent |
+| No approval within `VOICE_APPROVAL_TIMEOUT_SECONDS` (default 120) | A polite offer to call back |
+| Call already ended | A sign-off |
+
+An unapproved draft is never streamed. `"stream": false` returns an ordinary completion
+object, which is useful for testing the endpoint by hand.
+
+---
+
 ## 3. Real-Time WebSocket (`/ws/call/{session_id}`)
 
 ### A. Events Sent by Frontend to Backend
@@ -248,3 +379,39 @@ When the call ends:
   }
 }
 ```
+
+## Recovery and safe retries
+
+Call state is persisted locally in SQLite. Run one server worker. Status includes `pending_draft_id`, `control_revision`, `paused`, `created_at`, `ended_at`, `language`, and `raw_prompt` for presenter recovery. These private fields are not available from the receptionist endpoint.
+
+Send an optional unique `request_id` on `evaluate-turn`, participant turns, and `user-action`; reuse it only when retrying that identical request. Successful receipts are retained for the latest 64 requests. Changed payloads and requests invalidated by a pause return 409. Frontend text requests automatically use these IDs; raw audio uploads are not deduplicated.
+
+Draft responses include `draft_id`. Send `{ "draft_id": "..." }` to `approve` to ensure only the reviewed draft can be approved. A retry of the last approved draft returns its receipt without appending or approving it twice. Pause invalidates in-flight model results immediately. End marks the call ended before generating the summary; a summary failure does not reopen it.
+
+## User-language decisions
+
+Turn decisions include `translated_violation_reason` and `translated_user_options` in the session's selected language. The translated options align one-to-one with `suggested_user_options`. Render translated labels but send the corresponding canonical English option as `chosen_action`. Keep `draft_response` / `english_response` as the spoken English and show `translated_response` first for user review. The WebSocket decision event exposes `translated_reason` and `translated_options` alongside its original fields.
+
+## Conversation preferences and presence
+
+`POST /api/session/create` accepts optional `business_name` (up to 160 characters) and `spending_limit` (a finite USD amount from 0 to 1,000,000). Explicit settings are included in goal extraction and then applied on the server; an explicit spending limit replaces model-extracted monetary maximums while preserving other constraints. Omitting the field preserves any limit extracted from the written task.
+
+Presenter status includes `participant_connected`, true while the participant page was seen within eight seconds. This is connection presence only. It does not prove a person is listening. `/app` serves the current workspace; `/demo` remains a compatibility alias.
+
+## Reply preferences
+
+Session creation accepts optional `preferences`: `{ "tone": "professional|friendly|direct", "reply_length": "concise|detailed", "additional_instructions": "up to 1200 characters" }`. Defaults are professional, concise, and empty instructions. Preferences are included in presenter status and retained with saved calls; they are excluded from participant status. They guide planning and generated replies, not verbatim translation, and never override approval rules. Voice and appearance preferences remain in the browser.
+
+## Private pilot access and invitation lifecycle
+
+For remote sharing, configure `DELEGATE_PUBLIC_MODE=true` and a random `DELEGATE_PILOT_PASSCODE` of at least 16 characters. `/api/access/login` accepts `{"passcode":"..."}` and sets a 12-hour HttpOnly, SameSite=Strict cookie (Secure in public mode). `/api/access/logout` clears it. Controller REST and WebSocket endpoints require this cookie when protection is enabled. The participant API uses its separate capability token and does not require a host login. This is one trusted workspace, not multi-tenant accounts.
+
+Health adds `pilot_protected`, `public_access_ready`, and `invitation_hours`. All API and participant-page responses use `Cache-Control: no-store`; cross-origin mutation requests are rejected. Pilot request limits return 429 with `Retry-After`; pause/end controls remain available.
+
+- `POST /api/session/{id}/invitation/renew`: invalidate the previous invitation, return a new `participant_path` and `participant_expires_at` (Unix seconds, 24 hours from issuance).
+- `POST /api/session/{id}/invitation/revoke`: invalidate the current invitation; status becomes `participant_path: null`. Existing transcripts stay saved.
+- `POST /api/session/{id}/delete`: remove a completed conversation from memory and SQLite and invalidate its invitation. Returns 409 for an active conversation or live voice call, 404 if already absent. This is application deletion, not secure erasure of provider logs or backups.
+
+Stop a live voice call before renewing/revoking its invitation. Unknown/revoked participant tokens return 404; expired tokens return 410. Already-minted provider tokens have their own expiration and cannot be recalled by deleting the invitation. Ended rooms return 409 when requesting new transcription credentials.
+
+Participant status now includes `live_listening_configured` and `voice_live` for capability-aware controls. Controller status also includes `participant_expires_at` and `pilot_protected`. Polling these endpoints remains read-only with respect to AI usage.

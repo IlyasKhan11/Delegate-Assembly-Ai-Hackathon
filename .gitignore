@@ -24,3 +24,6 @@ env/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Local call history (contains private prompts and conversation data)
+.delegate-data/
