@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: delegate
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    envVars:
+      # Secrets: Render asks for these during setup; they are never stored in the repo.
+      - key: AIML_API_KEY
+        sync: false
+      - key: ASSEMBLYAI_API_KEY
+        sync: false
+      - key: DELEGATE_PILOT_PASSCODE
+        sync: false
