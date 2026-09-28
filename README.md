@@ -2,6 +2,8 @@
 
 **Start here:** [Test with your friend and share the app](PILOT_GUIDE.md). The app now includes guided setup, private-pilot access, expiring/revocable invitations, and saved-conversation deletion. Docker deployment and CI checks are included. This is a private browser pilot, not a public multi-tenant release.
 
+**Deployment:** [Hosting without Railway](PILOT_GUIDE.md#hosting-without-railway). New workspaces start in English; other languages remain available in setup.
+
 ## Delegate frontend
 
 The repository includes **Delegate**, a browser conversation workspace with general business/task setup, five user languages, participant invitations, bilingual reply approval, and saved conversation summaries.

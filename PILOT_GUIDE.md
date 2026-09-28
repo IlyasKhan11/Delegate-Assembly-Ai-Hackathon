@@ -48,6 +48,35 @@ Then test audio: your friend presses **Enable agent audio here**, then **Dictate
 
 Ask your friend where they hesitated, whether the responses made sense, and whether waiting for approval felt clear. Record translation errors, unexpected speech, and the time from sending a reply to seeing the draft. This is more useful than testing every audio mode at once.
 
+## Hosting without Railway
+
+### Blitz cloud
+
+Deploy the repository using the root Dockerfile and keep `/data` as a persistent folder. Set `DELEGATE_DATABASE=/data/calls.sqlite3`, `DELEGATE_PUBLIC_MODE=true`, the provider keys, and a private `DELEGATE_PILOT_PASSCODE` of at least 16 characters. Leave the Docker start command in place; it honors the host's `PORT`.
+
+The image uses UID/GID `1000:1000` and declares `/data` as a volume. Blitz's [Docker requirements](https://blitz.cloud/docs/deploy-docker-image/) describe running apps as UID/GID 1000; the data folder must be writable by that identity. An existing mount overrides the directory ownership built into the image. If startup reports `Database folder /data is not writable by user id 1000` (or, on older builds, `sqlite3.OperationalError: unable to open database file`), check the exact database setting and the mounted folder permissions in the runtime logs/settings. A mount previously created for UID 10001 needs its ownership corrected by the host; do not delete existing conversation data or move it into `/tmp` to hide this error.
+
+After deploying, open `/app`, unlock the workspace, and run **Check setup**. Set `PUBLIC_BASE_URL` to the actual HTTPS origin if using the full voice-call bridge. Verify that a saved conversation remains available after a restart before relying on persistence. The free plan does not back up kept folders; download important summaries.
+
+### Render free web service
+
+The existing Dockerfile serves both the frontend and Python backend. You do not need a separate frontend host.
+
+1. Push the latest app changes to your deployment repository so the English-default update is included.
+2. In [Render](https://dashboard.render.com/), choose **New → Web Service**, connect `IlyasKhan11/Delegate-Assembly-Ai-Hackathon`, and select `main`.
+3. Choose **Docker**, use the root `Dockerfile`, select the **Free** instance, and set the health-check path to `/api/health`. Keep one instance; the Docker command already uses one worker and honors Render's `PORT`.
+4. Add `AIML_API_KEY`, `ASSEMBLYAI_API_KEY`, and a random `DELEGATE_PILOT_PASSCODE` of at least 16 characters in the service's secret environment settings. Do not upload or commit `.env`. The Dockerfile already enables `DELEGATE_PUBLIC_MODE=true`.
+5. Deploy. Once the service reports **Live**, open its assigned HTTPS address followed by `/app`, unlock it with the pilot passcode, and select **Check setup**. Try the sample conversation first; real AI and speech features still require provider credits.
+6. For the optional full live voice-call bridge, set `PUBLIC_BASE_URL` to the assigned HTTPS origin (without `/app`) and redeploy. Ordinary browser conversations and live transcription do not need this setting.
+
+Render's documentation supports [free services without a payment method](https://render.com/docs/free), but that is not a guarantee that your account will avoid a card-verification request. If the dashboard requires a card, stop there; this project cannot bypass that requirement. The `render.yaml` Blueprint is also available for accounts that can use it.
+
+Free services sleep after 15 minutes without inbound traffic and can take about a minute to wake. Saved SQLite conversations are lost on sleep, restart, or redeployment; download summaries you want to keep. The free allowance is 750 instance hours per workspace each month, with separate bandwidth and build limits. See [Render's current limits](https://render.com/docs/free).
+
+### No-account temporary demo
+
+If account verification blocks hosting, the Cloudflare Quick Tunnel described under **Share with a remote friend** gives you a temporary public HTTPS address without a hosting account. Your computer, app, and tunnel must remain running. This is useful for a demo but does not provide hosting while your laptop is off, a stable URL, or support for the full voice-call bridge's server-sent events. Keep public mode and the pilot passcode enabled before exposing the app.
+
 ## Keep it running
 
 A container deployment is included:

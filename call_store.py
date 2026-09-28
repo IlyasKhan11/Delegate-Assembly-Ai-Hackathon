@@ -6,11 +6,24 @@ from pathlib import Path
 from threading import RLock
 
 
+def ensure_writable_directory(directory):
+    """Fail with a clear message instead of SQLite's vague 'unable to open database file'."""
+    try:
+        directory.mkdir(parents=True, exist_ok=True, mode=0o700)
+    except PermissionError:
+        pass  # Reported below with the same message as an unwritable folder.
+    if not os.access(directory, os.W_OK | os.X_OK):
+        raise PermissionError(
+            f"Database folder {directory} is not writable by user id {os.getuid()}. "
+            f"Give that user ownership of the folder (e.g. chown {os.getuid()}:{os.getgid()} {directory}) "
+            "or point DELEGATE_DATABASE at a writable persistent path."
+        )
+
+
 class CallStore:
     def __init__(self, path):
         if path != ':memory:':
-            directory = Path(path).parent
-            directory.mkdir(parents=True, exist_ok=True, mode=0o700)
+            ensure_writable_directory(Path(path).parent)
         self.lock = RLock()
         self.connection = sqlite3.connect(path, check_same_thread=False)
         self.connection.execute('PRAGMA journal_mode=WAL')
