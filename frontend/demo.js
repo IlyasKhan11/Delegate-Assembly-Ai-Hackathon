@@ -19,7 +19,7 @@ const phrases = {
   confirmed: ["All set for Friday at 12 PM. This is Marcus at the front desk. I’m not sure about the room category or luggage storage before noon.", "Todo listo para el viernes a las 12 PM. Soy Marcus de recepción. No estoy seguro de la categoría de habitación ni del almacenamiento de equipaje antes del mediodía.", "Tout est prêt pour vendredi à midi. Ici Marcus à la réception. La catégorie de chambre et la consigne avant midi restent à vérifier.", "Alles ist für Freitag um 12 Uhr bereit. Hier ist Marcus von der Rezeption. Zimmerkategorie und Gepäckaufbewahrung vor Mittag sind noch unklar.", "Tudo certo para sexta às 12h. Sou Marcus, da recepção. A categoria do quarto e o depósito de bagagem antes do meio-dia precisam ser verificados."],
   goodbye: ["Understood. We’ll keep the original check-in. Thank you for calling. Goodbye!", "Entendido. Mantendremos la entrada original. Gracias por llamar. ¡Adiós!", "Compris. Nous gardons l’arrivée initiale. Merci de votre appel. Au revoir !", "Verstanden. Wir behalten die ursprüngliche Zeit. Danke für Ihren Anruf. Auf Wiedersehen!", "Entendido. Manteremos o horário original. Obrigado pela ligação. Até logo!"],
 };
-export function phrase(key, language = 'Spanish') {
+export function phrase(key, language = 'English') {
   const index = {English: 0, Spanish: 1, French: 2, German: 3, 'Portuguese (Brazil)': 4, Portuguese: 4}[language] ?? 0;
   return {text: phrases[key]?.[0] || key, translation: phrases[key]?.[index] || ''};
 }

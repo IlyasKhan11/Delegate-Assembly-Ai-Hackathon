@@ -9,7 +9,7 @@ const root = document.querySelector('#app');
 const modal = document.querySelector('#modal');
 const state = {
   page: ['/app','/demo'].includes(location.pathname) || location.hash.startsWith('#demo') ? 'setup' : 'landing',
-  mode: 'assist', language: 'Spanish', source: 'live', goal: '', businessName: '', spendingLimit: '', participantConnected: false,
+  mode: 'assist', language: 'English', source: 'live', goal: '', businessName: '', spendingLimit: '', participantConnected: false,
   session: null, status: 'READY_TO_START', transcript: [], ledger: [], draft: null,
   decision: null, summary: null, busy: false, error: '', phase: 'price', price: 0,
   custom: '', customDirty: false, interrupted: false, recording: false, rules: null, started: null,
