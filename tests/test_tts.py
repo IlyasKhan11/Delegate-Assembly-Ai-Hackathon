@@ -127,6 +127,18 @@ class SynthesisTests(unittest.TestCase):
                 return await tts.synthesize('Hello there.')
         self.assertEqual(asyncio.run(scenario()), FAKE_MP3)
 
+    def test_a_stalled_speech_service_fails_with_a_clear_reason(self):
+        """A host that silently blocks outbound traffic must not hang the request."""
+        async def never_answers(text, voice):
+            await asyncio.sleep(60)
+
+        async def scenario():
+            with patch.object(tts, 'SYNTHESIS_TIMEOUT_SECONDS', 0.05), \
+                 patch.object(tts, '_render', side_effect=never_answers):
+                await tts.synthesize('Hello there.')
+        with self.assertRaisesRegex(TimeoutError, 'speech.platform.bing.com'):
+            asyncio.run(scenario())
+
     def test_empty_text_is_rejected_before_any_work(self):
         async def scenario():
             with patch.object(tts, '_render') as render:

@@ -27,6 +27,8 @@ SELECTABLE_VOICES = {
 # Synthesis takes a second or two, so finished audio is kept for replays and
 # for the common case of pre-generating a draft before it is approved.
 CACHE_LIMIT = 64
+# The page gives up after 12 seconds, so the server must fail before that.
+SYNTHESIS_TIMEOUT_SECONDS = 8
 _cache = OrderedDict()
 _in_flight = {}
 
@@ -75,6 +77,18 @@ async def _render(text, voice):
     return audio
 
 
+async def _render_within_time_limit(text, voice):
+    # Without a limit, a host that silently blocks outbound connections leaves
+    # the request hanging until the host's proxy gives up with an unexplained
+    # 503. Failing first means the log says what actually went wrong.
+    try:
+        return await asyncio.wait_for(_render(text, voice), SYNTHESIS_TIMEOUT_SECONDS)
+    except asyncio.TimeoutError:
+        raise TimeoutError(
+            f"The speech service did not answer within {SYNTHESIS_TIMEOUT_SECONDS} seconds. "
+            "Check that this server can reach speech.platform.bing.com.") from None
+
+
 async def synthesize(text, voice=None):
     """Returns MP3 bytes for one sentence, reusing earlier work where possible.
 
@@ -91,7 +105,7 @@ async def synthesize(text, voice=None):
         _cache.move_to_end(key)
         return _cache[key]
     if key not in _in_flight:
-        _in_flight[key] = asyncio.create_task(_render(text, chosen_voice))
+        _in_flight[key] = asyncio.create_task(_render_within_time_limit(text, chosen_voice))
     try:
         audio = await asyncio.shield(_in_flight[key])
     finally:
